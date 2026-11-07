@@ -1,0 +1,59 @@
+; Nemunemu Calico Cursor (ねむねむ三毛ネコ) - Windows Setup INF Installer
+; Right-click install.inf in Windows Explorer and select "Install" (インストール),
+; or run install.ps1 for zero-reboot instant cursor switching without administrator privileges.
+
+[Version]
+signature="$CHICAGO$"
+
+[DefaultInstall]
+CopyFiles = Scheme.Cur
+AddReg    = Scheme.Reg
+
+[DestinationDirs]
+Scheme.Cur = 10,"%CUR_DIR%"
+
+[SourceDisksNames]
+1 = "%SCHEME_NAME%",,1
+
+[SourceDisksFiles]
+nemunemu_normal.ani  = 1,cursors
+nemunemu_normal.cur  = 1,cursors
+nemunemu_link.ani    = 1,cursors
+nemunemu_link.cur    = 1,cursors
+nemunemu_text.ani    = 1,cursors
+nemunemu_text.cur    = 1,cursors
+nemunemu_busy.ani    = 1,cursors
+nemunemu_busy.cur    = 1,cursors
+nemunemu_working.ani = 1,cursors
+nemunemu_working.cur = 1,cursors
+
+[Scheme.Cur]
+"nemunemu_normal.ani"
+"nemunemu_normal.cur"
+"nemunemu_link.ani"
+"nemunemu_link.cur"
+"nemunemu_text.ani"
+"nemunemu_text.cur"
+"nemunemu_busy.ani"
+"nemunemu_busy.cur"
+"nemunemu_working.ani"
+"nemunemu_working.cur"
+
+[Scheme.Reg]
+HKCU,"Control Panel\Cursors\Schemes","%SCHEME_NAME%",0x00020000,"%10%\%CUR_DIR%\%pointer%,%10%\cursors\aero_helpsel.cur,%10%\%CUR_DIR%\%work%,%10%\%CUR_DIR%\%busy%,,%10%\%CUR_DIR%\%text%,%10%\cursors\aero_pen.cur,%10%\cursors\aero_unavail.cur,%10%\cursors\aero_ns.cur,%10%\cursors\aero_ew.cur,%10%\cursors\aero_nwse.cur,%10%\cursors\aero_nesw.cur,%10%\cursors\aero_move.cur,%10%\cursors\aero_up.cur,%10%\%CUR_DIR%\%link%,%10%\cursors\aero_pin.cur,%10%\cursors\aero_person.cur"
+HKCU,"Control Panel\Cursors",,0x00000000,"%SCHEME_NAME%"
+HKCU,"Control Panel\Cursors","Scheme Source",0x00010001,1
+HKCU,"Control Panel\Cursors","Arrow",0x00020000,"%10%\%CUR_DIR%\%pointer%"
+HKCU,"Control Panel\Cursors","Hand",0x00020000,"%10%\%CUR_DIR%\%link%"
+HKCU,"Control Panel\Cursors","IBeam",0x00020000,"%10%\%CUR_DIR%\%text%"
+HKCU,"Control Panel\Cursors","Wait",0x00020000,"%10%\%CUR_DIR%\%busy%"
+HKCU,"Control Panel\Cursors","AppStarting",0x00020000,"%10%\%CUR_DIR%\%work%"
+
+[Strings]
+CUR_DIR     = "Cursors\NemunemuCalico"
+SCHEME_NAME = "Nemunemu Calico"
+pointer     = "nemunemu_normal.ani"
+link        = "nemunemu_link.ani"
+text        = "nemunemu_text.ani"
+busy        = "nemunemu_busy.ani"
+work        = "nemunemu_working.ani"

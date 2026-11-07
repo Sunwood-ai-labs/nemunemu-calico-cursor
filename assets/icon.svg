@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8F8F3" />
+      <stop offset="100%" stop-color="#FDF8F2" />
+    </linearGradient>
+    <linearGradient id="mintGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4FD1C5" />
+      <stop offset="100%" stop-color="#319795" />
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded Square Background -->
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#bgGrad)" stroke="#38B2AC" stroke-width="4" />
+
+  <!-- Calico Cat Ears -->
+  <!-- Left Ear (Dark Brown/Charcoal patch) -->
+  <polygon points="34,58 26,28 54,42" fill="#4A3B32" stroke="#4A3B32" stroke-width="4" stroke-linejoin="round" />
+  <polygon points="36,52 31,34 48,43" fill="#F6AD55" opacity="0.5" />
+  <!-- Right Ear (Orange/Amber patch) -->
+  <polygon points="94,58 102,28 74,42" fill="#ED8936" stroke="#4A3B32" stroke-width="4" stroke-linejoin="round" />
+  <polygon points="92,52 97,34 80,43" fill="#FBD38D" />
+
+  <!-- Calico Cat Head Base -->
+  <ellipse cx="64" cy="70" rx="38" ry="32" fill="#FFFDF9" stroke="#4A3B32" stroke-width="4" />
+
+  <!-- Calico Patches on Head (Clipped cleanly via path geometry) -->
+  <!-- Left Dark Brown Patch -->
+  <path d="M 27,64 C 27,48 42,39 56,40 C 52,52 42,62 27,64 Z" fill="#4A3B32" />
+  <!-- Right Warm Orange Patch -->
+  <path d="M 101,64 C 101,48 86,39 72,40 C 76,52 86,62 101,64 Z" fill="#ED8936" />
+
+  <!-- Sleepy Closed Eyes (U-shaped curves) -->
+  <path d="M 42,68 Q 49,75 56,68" fill="none" stroke="#4A3B32" stroke-width="4" stroke-linecap="round" />
+  <path d="M 72,68 Q 79,75 86,68" fill="none" stroke="#4A3B32" stroke-width="4" stroke-linecap="round" />
+
+  <!-- Soft Blush Cheeks -->
+  <ellipse cx="38" cy="76" rx="6" ry="3.5" fill="#FEB2B2" opacity="0.85" />
+  <ellipse cx="90" cy="76" rx="6" ry="3.5" fill="#FEB2B2" opacity="0.85" />
+
+  <!-- Nose & Sleepy Mouth ('ω' + tiny sleep bubble) -->
+  <polygon points="61,74 67,74 64,78" fill="#F687B3" />
+  <path d="M 57,81 Q 60.5,85 64,81 Q 67.5,85 71,81" fill="none" stroke="#4A3B32" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Sleep Snot Bubble (Nemunemu motif) -->
+  <circle cx="77" cy="81" r="7" fill="#E6FFFA" fill-opacity="0.85" stroke="#38B2AC" stroke-width="2.5" />
+  <circle cx="75" cy="79" r="2" fill="#FFFFFF" />
+
+  <!-- Mint Cursor Arrow Badge (Top-Left Accent) -->
+  <g transform="translate(10, 10)">
+    <path d="M 6,4 L 6,34 L 14,27 L 20,38 L 25,35 L 19,24 L 29,24 Z" fill="url(#mintGrad)" stroke="#FFFFFF" stroke-width="3.5" stroke-linejoin="round" />
+    <path d="M 6,4 L 6,34 L 14,27 L 20,38 L 25,35 L 19,24 L 29,24 Z" fill="url(#mintGrad)" stroke="#234E52" stroke-width="2" stroke-linejoin="round" />
+  </g>
+
+  <!-- Zzz Motif (Top-Right) -->
+  <g fill="#319795" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="800">
+    <text x="92" y="25" font-size="15" transform="rotate(-10 92 25)">Z</text>
+    <text x="104" y="18" font-size="11" transform="rotate(8 104 18)">z</text>
+  </g>
+</svg>
