@@ -5,8 +5,10 @@
     Copies the selected cursor size (128, 96, 64, 48, or 32; default: 96) to
     %LOCALAPPDATA%\Cursors\NemunemuCalico, backs up the existing HKCU:\Control Panel\Cursors
     and Accessibility CursorSize settings on first run, updates CursorBaseSize and active
-    cursor paths, and invokes Win32 SystemParametersInfo (SPI_SETCURSORSIZE + SPI_SETCURSORS)
-    so the enlarged animated cursors take effect immediately without signing out.
+    cursor paths, invokes Win32 SystemParametersInfo (SPI_SETCURSORSIZE + SPI_SETCURSORS),
+    and explicitly loads each .ani at full native resolution ($Size x $Size) via
+    LoadImageW(LR_LOADFROMFILE) + SetSystemCursor so the in-memory HCURSOR bitmap is not
+    downscaled to SM_CXCURSOR (32x32) during the current logon session.
 .PARAMETER Size
     Cursor pixel size to install and display: 128, 96 (default), 64, 48, or 32.
 #>
@@ -154,58 +156,100 @@ if (-not (Test-Path $AccessRegPath)) {
 $AccessSlider = [Math]::Max(1, [Math]::Min(15, [int](($Size - 32) / 8) + 1))
 New-ItemProperty -Path $AccessRegPath -Name "CursorSize" -Value $AccessSlider -PropertyType DWord -Force | Out-Null
 
-# 5. Notify Windows immediately via Win32 SystemParametersInfo (SPI_SETCURSORSIZE = 0x2029 & SPI_SETCURSORS = 0x0057)
-if (-not ("Win32CursorNativeV2" -as [type])) {
+# 5. Notify Windows via SystemParametersInfo AND inject full-resolution HCURSORs via LoadImageW + SetSystemCursor
+if (-not ("Win32CursorNativeV3" -as [type])) {
     Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
 
-public static class Win32CursorNativeV2 {
+public static class Win32CursorNativeV3 {
     public const uint SPI_SETCURSORS = 0x0057;
     public const uint SPI_GETCURSORSIZE = 0x2028;
     public const uint SPI_SETCURSORSIZE = 0x2029;
     public const uint SPIF_UPDATEINIFILE = 0x01;
     public const uint SPIF_SENDCHANGE = 0x02;
+    public const uint IMAGE_CURSOR = 2;
+    public const uint LR_LOADFROMFILE = 0x00000010;
 
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     public static extern bool SystemParametersInfo(
         uint uiAction,
         uint uiParam,
         IntPtr pvParam,
         uint fWinIni
     );
+
+    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    public static extern IntPtr LoadImage(
+        IntPtr hInst,
+        string lpszName,
+        uint uType,
+        int cxDesired,
+        int cyDesired,
+        uint fuLoad
+    );
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetSystemCursor(
+        IntPtr hcur,
+        uint id
+    );
 }
 "@
 }
 
-$sizeOk = [Win32CursorNativeV2]::SystemParametersInfo(
-    [Win32CursorNativeV2]::SPI_SETCURSORSIZE,
+$sizeOk = [Win32CursorNativeV3]::SystemParametersInfo(
+    [Win32CursorNativeV3]::SPI_SETCURSORSIZE,
     0,
     [IntPtr]$Size,
-    ([Win32CursorNativeV2]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV2]::SPIF_SENDCHANGE)
+    ([Win32CursorNativeV3]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV3]::SPIF_SENDCHANGE)
 )
 if (-not $sizeOk) {
-    $sizeOk = [Win32CursorNativeV2]::SystemParametersInfo(
-        [Win32CursorNativeV2]::SPI_SETCURSORSIZE,
+    [void][Win32CursorNativeV3]::SystemParametersInfo(
+        [Win32CursorNativeV3]::SPI_SETCURSORSIZE,
         0,
         [IntPtr]$Size,
-        [Win32CursorNativeV2]::SPIF_SENDCHANGE
+        [Win32CursorNativeV3]::SPIF_SENDCHANGE
     )
 }
 
-$curOk = [Win32CursorNativeV2]::SystemParametersInfo(
-    [Win32CursorNativeV2]::SPI_SETCURSORS,
+$curOk = [Win32CursorNativeV3]::SystemParametersInfo(
+    [Win32CursorNativeV3]::SPI_SETCURSORS,
     0,
     [IntPtr]::Zero,
-    ([Win32CursorNativeV2]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV2]::SPIF_SENDCHANGE)
+    ([Win32CursorNativeV3]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV3]::SPIF_SENDCHANGE)
 )
 if (-not $curOk) {
-    $curOk = [Win32CursorNativeV2]::SystemParametersInfo(
-        [Win32CursorNativeV2]::SPI_SETCURSORS,
+    [void][Win32CursorNativeV3]::SystemParametersInfo(
+        [Win32CursorNativeV3]::SPI_SETCURSORS,
         0,
         [IntPtr]::Zero,
-        [Win32CursorNativeV2]::SPIF_SENDCHANGE
+        [Win32CursorNativeV3]::SPIF_SENDCHANGE
     )
 }
 
-Write-Host "[Active] Applied '$SchemeName' v2 (${Size}x${Size}, CursorBaseSize=$Size, Slider=$AccessSlider) immediately!" -ForegroundColor Green
+# Explicitly load each .ani at $Size x $Size (without LR_DEFAULTSIZE) and set via SetSystemCursor
+# so the in-memory Win32 HCURSOR bitmap (hbmColor) is $Size x $Size even before next logon.
+$RoleMap = @(
+    @{ Id = [uint32]32512; Path = $NormalPath },   # OCR_NORMAL (Arrow)
+    @{ Id = [uint32]32649; Path = $LinkPath },     # OCR_HAND (Hand)
+    @{ Id = [uint32]32513; Path = $TextPath },     # OCR_IBEAM (IBeam)
+    @{ Id = [uint32]32514; Path = $BusyPath },     # OCR_WAIT (Wait)
+    @{ Id = [uint32]32650; Path = $WorkingPath }   # OCR_APPSTARTING (AppStarting)
+)
+
+foreach ($entry in $RoleMap) {
+    $hCur = [Win32CursorNativeV3]::LoadImage(
+        [IntPtr]::Zero,
+        $entry.Path,
+        [Win32CursorNativeV3]::IMAGE_CURSOR,
+        $Size,
+        $Size,
+        [Win32CursorNativeV3]::LR_LOADFROMFILE
+    )
+    if ($hCur -ne [IntPtr]::Zero) {
+        [void][Win32CursorNativeV3]::SetSystemCursor($hCur, $entry.Id)
+    }
+}
+
+Write-Host "[Active] Applied '$SchemeName' v2 (${Size}x${Size} native HCURSOR + SPI_SETCURSORSIZE=$Size) immediately!" -ForegroundColor Green
