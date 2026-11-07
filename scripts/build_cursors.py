@@ -5,10 +5,20 @@
 #     "pillow>=10.0.0",
 # ]
 # ///
-"""Build Windows .cur and .ani cursor files from animated GIF assets.
+"""Build Windows .cur, .ani, and animated GIF files from v2 sprite sheets.
 
-Generates 64x64 (default), 48x48, and 32x32 cursor sets along with a visual
-hotspot guide image (`assets/preview/hotspot-guide.png`).
+Extracts 8 frames (4x2 grid) from each high-resolution sprite sheet in
+`assets/sprites/`, removes low-alpha background noise, tightly crops around
+the union bounding box of all 8 frames so the cursor fills the canvas maximally,
+and generates:
+  - `cursors/` (default 96x96 large cursor set)
+  - `cursors/128x128/` (128x128 extra-large cursor set)
+  - `cursors/96x96/` (96x96 large cursor set)
+  - `cursors/64x64/` (64x64 medium cursor set)
+  - `cursors/48x48/` (48x48 compact cursor set)
+  - `cursors/32x32/` (32x32 classic cursor set)
+  - `assets/gif/*.gif` and `assets/preview/hotspot-guide.png`
+
 Use `--check` to validate existing `.cur` and `.ani` files (including Win32
 `LoadCursorFromFileW` verification when running on Windows).
 """
@@ -17,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import shutil
 import struct
 import sys
 from dataclasses import dataclass
@@ -25,18 +36,22 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+SPRITES_DIR = REPO_ROOT / "assets" / "sprites"
 GIF_DIR = REPO_ROOT / "assets" / "gif"
 PREVIEW_DIR = REPO_ROOT / "assets" / "preview"
 CURSORS_DIR = REPO_ROOT / "cursors"
+DOCS_PUBLIC_ASSETS = REPO_ROOT / "docs" / "public" / "assets"
 
 
 @dataclass(frozen=True)
 class CursorSpec:
     role: str
     filename_stem: str
-    source_gif: str
+    source_sheet: str
+    output_gif: str
     label: str
     win_reg_key: str
+    crop_box: tuple[int, int, int, int]  # (x0, y0, x1, y1) inside each 443.5x443.5 cell
     hotspots: dict[int, tuple[int, int]]
 
 
@@ -44,50 +59,155 @@ CURSOR_SPECS: tuple[CursorSpec, ...] = (
     CursorSpec(
         role="normal",
         filename_stem="nemunemu_normal",
-        source_gif="01_normal_64.gif",
+        source_sheet="01_normal_sheet.png",
+        output_gif="01_normal_64.gif",
         label="Normal Select (Arrow)",
         win_reg_key="Arrow",
-        hotspots={64: (11, 9), 48: (8, 7), 32: (6, 5)},
+        crop_box=(60, 38, 60 + 367, 38 + 367),
+        hotspots={
+            128: (5, 8),
+            96: (3, 6),
+            64: (2, 4),
+            48: (2, 3),
+            32: (1, 2),
+        },
     ),
     CursorSpec(
         role="link",
         filename_stem="nemunemu_link",
-        source_gif="02_link_64.gif",
+        source_sheet="02_link_sheet.png",
+        output_gif="02_link_64.gif",
         label="Link Select (Hand)",
         win_reg_key="Hand",
-        hotspots={64: (21, 6), 48: (16, 5), 32: (11, 3)},
+        crop_box=(32, 22, 32 + 395, 22 + 395),
+        hotspots={
+            128: (39, 2),
+            96: (29, 1),
+            64: (19, 1),
+            48: (14, 1),
+            32: (10, 0),
+        },
     ),
     CursorSpec(
         role="text",
         filename_stem="nemunemu_text",
-        source_gif="03_text_64.gif",
+        source_sheet="03_text_sheet.png",
+        output_gif="03_text_64.gif",
         label="Text Select (IBeam)",
         win_reg_key="IBeam",
-        hotspots={64: (18, 32), 48: (14, 24), 32: (9, 16)},
+        crop_box=(84, 62, 84 + 357, 62 + 357),
+        hotspots={
+            128: (16, 60),
+            96: (12, 45),
+            64: (8, 30),
+            48: (6, 22),
+            32: (4, 15),
+        },
     ),
     CursorSpec(
         role="busy",
         filename_stem="nemunemu_busy",
-        source_gif="04_busy_64.gif",
+        source_sheet="04_busy_sheet.png",
+        output_gif="04_busy_64.gif",
         label="Busy (Wait)",
         win_reg_key="Wait",
-        hotspots={64: (32, 32), 48: (24, 24), 32: (16, 16)},
+        crop_box=(51, 52, 51 + 340, 52 + 340),
+        hotspots={
+            128: (64, 64),
+            96: (48, 48),
+            64: (32, 32),
+            48: (24, 24),
+            32: (16, 16),
+        },
     ),
     CursorSpec(
         role="working",
         filename_stem="nemunemu_working",
-        source_gif="04_busy_64.gif",
+        source_sheet="04_busy_sheet.png",
+        output_gif="04_busy_64.gif",
         label="Working in Background (AppStarting)",
         win_reg_key="AppStarting",
-        hotspots={64: (32, 32), 48: (24, 24), 32: (16, 16)},
+        crop_box=(51, 52, 51 + 340, 52 + 340),
+        hotspots={
+            128: (64, 64),
+            96: (48, 48),
+            64: (32, 32),
+            48: (24, 24),
+            32: (16, 16),
+        },
     ),
 )
 
 SIZES: tuple[tuple[int, Path], ...] = (
-    (64, CURSORS_DIR),
+    (96, CURSORS_DIR),  # Default root cursors/ uses large 96x96
+    (128, CURSORS_DIR / "128x128"),
+    (96, CURSORS_DIR / "96x96"),
+    (64, CURSORS_DIR / "64x64"),
     (48, CURSORS_DIR / "48x48"),
     (32, CURSORS_DIR / "32x32"),
 )
+
+
+def clean_rgba_alpha(img: Image.Image, threshold: int = 128) -> Image.Image:
+    """Zero out low-alpha background noise (< threshold) and harden opaque pixels."""
+    rgba = img.convert("RGBA")
+    raw = bytearray(rgba.tobytes())
+    for i in range(0, len(raw), 4):
+        if raw[i + 3] < threshold:
+            raw[i] = 0
+            raw[i + 1] = 0
+            raw[i + 2] = 0
+            raw[i + 3] = 0
+        else:
+            raw[i + 3] = 255
+    return Image.frombytes("RGBA", rgba.size, bytes(raw))
+
+
+def extract_sheet_frames(sheet_path: Path, crop_box: tuple[int, int, int, int]) -> list[Image.Image]:
+    """Slice a 4x2 sprite sheet into 8 tightly-cropped, alpha-cleaned RGBA frames."""
+    with Image.open(sheet_path) as sheet:
+        cleaned = clean_rgba_alpha(sheet, threshold=128)
+        w, h = cleaned.size
+        cw = w / 4.0
+        ch = h / 2.0
+        cx0, cy0, cx1, cy1 = crop_box
+        frames: list[Image.Image] = []
+        for row in range(2):
+            for col in range(4):
+                ox = int(round(col * cw))
+                oy = int(round(row * ch))
+                cell = cleaned.crop((ox, oy, ox + int(round(cw)), oy + int(round(ch))))
+                cropped = cell.crop((cx0, cy0, cx1, cy1))
+                frames.append(cropped)
+        return frames
+
+
+def resize_cursor_frame(frame: Image.Image, target_size: int) -> Image.Image:
+    """Resize a high-res cropped RGBA frame to target_size with crisp outlines."""
+    resized = frame.resize((target_size, target_size), Image.Resampling.LANCZOS)
+    return clean_rgba_alpha(resized, threshold=96)
+
+
+def save_transparent_gif(frames: list[Image.Image], out_path: Path, duration_ms: int = 160) -> None:
+    """Save RGBA frames as an animated transparent GIF."""
+    pal_frames: list[Image.Image] = []
+    for frame in frames:
+        alpha = frame.getchannel("A")
+        mask = Image.eval(alpha, lambda a: 255 if a < 128 else 0)
+        pal = frame.convert("RGB").quantize(colors=255, method=Image.Quantize.FASTOCTREE)
+        pal.paste(255, mask)
+        pal_frames.append(pal)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    pal_frames[0].save(
+        out_path,
+        save_all=True,
+        append_images=pal_frames[1:],
+        duration=duration_ms,
+        loop=0,
+        transparency=255,
+        disposal=2,
+    )
 
 
 def image_to_cur_bytes(img: Image.Image, hotspot_x: int, hotspot_y: int) -> bytes:
@@ -172,8 +292,6 @@ def frames_to_ani_bytes(
         raise ValueError("At least one frame is required to build .ani")
 
     n_frames = len(frames)
-    # anih structure (36 bytes):
-    # cbSize, cFrames, cSteps, cx, cy, cBitCount, cPlanes, jiffies, fl (AF_ICON=0x1)
     anih_payload = struct.pack(
         "<IIIIIIIII",
         36,
@@ -198,31 +316,13 @@ def frames_to_ani_bytes(
     return make_riff_chunk(b"RIFF", acon_payload)
 
 
-def load_gif_frames(gif_path: Path, target_size: int) -> list[Image.Image]:
-    """Extract all frames from an animated GIF as RGBA images at target_size."""
-    frames: list[Image.Image] = []
-    with Image.open(gif_path) as im:
-        n_frames = getattr(im, "n_frames", 1)
-        for idx in range(n_frames):
-            im.seek(idx)
-            rgba = im.convert("RGBA")
-            if rgba.size != (target_size, target_size):
-                rgba = rgba.resize(
-                    (target_size, target_size),
-                    Image.Resampling.NEAREST,
-                )
-            frames.append(rgba)
-    return frames
-
-
-def generate_hotspot_guide() -> Path:
-    """Generate `assets/preview/hotspot-guide.png` showing hotspots on all 4 designs."""
+def generate_hotspot_guide(extracted_cache: dict[str, list[Image.Image]]) -> Path:
+    """Generate `assets/preview/hotspot-guide.png` showing hotspots on all 4 v2 designs."""
     PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
     out_path = PREVIEW_DIR / "hotspot-guide.png"
 
-    # Unique visual designs (normal, link, text, busy)
     unique_specs = [s for s in CURSOR_SPECS if s.role != "working"]
-    card_w, card_h = 280, 360
+    card_w, card_h = 285, 380
     padding = 24
     header_h = 76
     canvas_w = padding * 2 + card_w * len(unique_specs) + padding * (len(unique_specs) - 1)
@@ -232,28 +332,26 @@ def generate_hotspot_guide() -> Path:
     draw = ImageDraw.Draw(canvas)
     font = ImageFont.load_default()
 
-    # Title banner
     draw.text(
         (padding, 20),
-        "Nemunemu Calico Cursor - Hotspot Reference Guide (64x64 / 48x48 / 32x32)",
+        "Nemunemu Calico Cursor v2 - Tight-Cropped Hotspot Guide (128 / 96 / 64 / 48 / 32)",
         fill=(32, 48, 42, 255),
         font=font,
     )
     draw.text(
         (padding, 42),
-        "Red crosshair marks the active click/point coordinate (hotspot_x, hotspot_y) verified across all 8 animation frames.",
+        "Red crosshair marks the active click/point coordinate (hotspot_x, hotspot_y) across all 8 animation frames.",
         fill=(88, 108, 100, 255),
         font=font,
     )
 
-    scale = 3  # 64 * 3 = 192x192 preview box
-    box_size = 64 * scale
+    scale = 2  # 96 * 2 = 192x192 preview box
+    box_size = 96 * scale
 
     for idx, spec in enumerate(unique_specs):
         card_x = padding + idx * (card_w + padding)
         card_y = header_h
 
-        # Card background
         draw.rounded_rectangle(
             [card_x, card_y, card_x + card_w, card_y + card_h],
             radius=12,
@@ -262,7 +360,6 @@ def generate_hotspot_guide() -> Path:
             width=2,
         )
 
-        # Checkerboard inside preview area
         bx0 = card_x + (card_w - box_size) // 2
         by0 = card_y + 16
         cell = 12
@@ -275,20 +372,17 @@ def generate_hotspot_guide() -> Path:
                     fill=c,
                 )
 
-        # Paste enlarged Frame 0
-        frames = load_gif_frames(GIF_DIR / spec.source_gif, 64)
-        enlarged = frames[0].resize((box_size, box_size), Image.Resampling.NEAREST)
+        frame96 = resize_cursor_frame(extracted_cache[spec.source_sheet][0], 96)
+        enlarged = frame96.resize((box_size, box_size), Image.Resampling.NEAREST)
         canvas.paste(enlarged, (bx0, by0), enlarged)
 
-        # Draw border around preview box
         draw.rectangle(
             [bx0, by0, bx0 + box_size, by0 + box_size],
             outline=(180, 200, 190, 255),
             width=1,
         )
 
-        # Draw hotspot crosshair
-        hx, hy = spec.hotspots[64]
+        hx, hy = spec.hotspots[96]
         px = bx0 + hx * scale + scale // 2
         py = by0 + hy * scale + scale // 2
         draw.line([(px - 14, py), (px + 14, py)], fill=(230, 35, 50, 255), width=2)
@@ -299,39 +393,40 @@ def generate_hotspot_guide() -> Path:
             fill=(230, 35, 50, 255),
         )
 
-        # Text metadata
-        ty = by0 + box_size + 16
-        draw.text((card_x + 18, ty), spec.label, fill=(24, 36, 32, 255), font=font)
+        ty = by0 + box_size + 14
+        draw.text((card_x + 16, ty), spec.label, fill=(24, 36, 32, 255), font=font)
         draw.text(
-            (card_x + 18, ty + 22),
+            (card_x + 16, ty + 20),
             f"File: {spec.filename_stem}.ani / .cur",
             fill=(70, 90, 82, 255),
             font=font,
         )
+        h128 = spec.hotspots[128]
+        h96 = spec.hotspots[96]
         h64 = spec.hotspots[64]
         h48 = spec.hotspots[48]
         h32 = spec.hotspots[32]
         draw.text(
-            (card_x + 18, ty + 44),
-            f"64x64 Hotspot: ({h64[0]}, {h64[1]})",
+            (card_x + 16, ty + 40),
+            f"96x96 (Default): ({h96[0]}, {h96[1]})",
             fill=(200, 30, 45, 255),
             font=font,
         )
         draw.text(
-            (card_x + 18, ty + 64),
-            f"48x48 Hotspot: ({h48[0]}, {h48[1]})",
+            (card_x + 16, ty + 58),
+            f"128x128: ({h128[0]}, {h128[1]}) | 64x64: ({h64[0]}, {h64[1]})",
             fill=(70, 90, 82, 255),
             font=font,
         )
         draw.text(
-            (card_x + 18, ty + 84),
-            f"32x32 Hotspot: ({h32[0]}, {h32[1]})",
+            (card_x + 16, ty + 76),
+            f"48x48: ({h48[0]}, {h48[1]}) | 32x32: ({h32[0]}, {h32[1]})",
             fill=(70, 90, 82, 255),
             font=font,
         )
         if spec.role == "busy":
             draw.text(
-                (card_x + 18, ty + 104),
+                (card_x + 16, ty + 96),
                 "(Also used for nemunemu_working)",
                 fill=(100, 120, 112, 255),
                 font=font,
@@ -342,28 +437,61 @@ def generate_hotspot_guide() -> Path:
 
 
 def build_all() -> list[Path]:
-    """Generate all .ani and .cur files across 64x64, 48x48, and 32x32."""
+    """Extract v2 sprite sheets, build GIF previews, and generate all .ani/.cur sets."""
     generated: list[Path] = []
+    extracted_cache: dict[str, list[Image.Image]] = {}
+
+    for spec in CURSOR_SPECS:
+        if spec.source_sheet not in extracted_cache:
+            sheet_path = SPRITES_DIR / spec.source_sheet
+            if not sheet_path.exists():
+                raise FileNotFoundError(f"Missing sprite sheet: {sheet_path}")
+            extracted_cache[spec.source_sheet] = extract_sheet_frames(sheet_path, spec.crop_box)
+
+    # 1. Generate animated GIFs in assets/gif/
+    GIF_DIR.mkdir(parents=True, exist_ok=True)
+    for spec in CURSOR_SPECS:
+        if spec.role == "working":
+            continue
+        raw_frames = extracted_cache[spec.source_sheet]
+        gif64_frames = [resize_cursor_frame(f, 64) for f in raw_frames]
+        gif_path = GIF_DIR / spec.output_gif
+        save_transparent_gif(gif64_frames, gif_path, duration_ms=160)
+        generated.append(gif_path)
+
+    # Also generate 256x256 calico cat hero GIF from normal stretching animation
+    hero256_frames = [resize_cursor_frame(f, 256) for f in extracted_cache["01_normal_sheet.png"]]
+    hero256_path = GIF_DIR / "04_calico_cat_256.gif"
+    save_transparent_gif(hero256_frames, hero256_path, duration_ms=160)
+    generated.append(hero256_path)
+
+    # 2. Generate .ani and .cur across all 6 target directories
     for size, out_dir in SIZES:
         out_dir.mkdir(parents=True, exist_ok=True)
         for spec in CURSOR_SPECS:
-            gif_path = GIF_DIR / spec.source_gif
-            if not gif_path.exists():
-                raise FileNotFoundError(f"Missing source GIF: {gif_path}")
-
-            frames = load_gif_frames(gif_path, size)
+            raw_frames = extracted_cache[spec.source_sheet]
+            sized_frames = [resize_cursor_frame(f, size) for f in raw_frames]
             hx, hy = spec.hotspots[size]
 
             ani_path = out_dir / f"{spec.filename_stem}.ani"
             cur_path = out_dir / f"{spec.filename_stem}.cur"
 
-            ani_path.write_bytes(frames_to_ani_bytes(frames, hx, hy, jiffies=10))
-            cur_path.write_bytes(image_to_cur_bytes(frames[0], hx, hy))
-
+            ani_path.write_bytes(frames_to_ani_bytes(sized_frames, hx, hy, jiffies=10))
+            cur_path.write_bytes(image_to_cur_bytes(sized_frames[0], hx, hy))
             generated.extend((ani_path, cur_path))
 
-    guide_path = generate_hotspot_guide()
+    # 3. Generate hotspot guide
+    guide_path = generate_hotspot_guide(extracted_cache)
     generated.append(guide_path)
+
+    # 4. Sync to docs/public/assets if present
+    if DOCS_PUBLIC_ASSETS.exists():
+        (DOCS_PUBLIC_ASSETS / "gif").mkdir(parents=True, exist_ok=True)
+        (DOCS_PUBLIC_ASSETS / "preview").mkdir(parents=True, exist_ok=True)
+        for g in GIF_DIR.glob("*.gif"):
+            shutil.copy2(g, DOCS_PUBLIC_ASSETS / "gif" / g.name)
+        shutil.copy2(guide_path, DOCS_PUBLIC_ASSETS / "preview" / guide_path.name)
+
     return generated
 
 
@@ -397,7 +525,6 @@ def verify_ani_bytes(data: bytes, expected_size: int, expected_hotspot: tuple[in
     cb_size, c_frames, c_steps, _, _, _, _, jiffies, fl = struct.unpack_from("<IIIIIIIII", data, 20)
     if cb_size != 36 or c_frames != 8 or c_steps != 8 or jiffies != 10 or fl != 1:
         raise ValueError(f"Unexpected anih values: cbSize={cb_size}, frames={c_frames}, fl={fl}")
-    # Verify first embedded icon chunk
     list_pos = 20 + 36
     if data[list_pos : list_pos + 4] != b"LIST" or data[list_pos + 8 : list_pos + 12] != b"fram":
         raise ValueError("Missing LIST fram chunk")
@@ -410,7 +537,7 @@ def verify_ani_bytes(data: bytes, expected_size: int, expected_hotspot: tuple[in
 
 
 def check_all() -> None:
-    """Verify all 30 cursor files structurally and via Win32 LoadCursorFromFileW if on Windows."""
+    """Verify all 60 cursor files structurally and via Win32 LoadCursorFromFileW if on Windows."""
     is_win = sys.platform == "win32"
     load_cursor = None
     destroy_cursor = None
@@ -452,13 +579,13 @@ def check_all() -> None:
         raise FileNotFoundError(f"Missing hotspot guide: {guide_path}")
 
     print(
-        f"[OK] Verified {checked_count} cursor files (.ani & .cur across 64/48/32) "
+        f"[OK] Verified {checked_count} cursor files (.ani & .cur across default/128/96/64/48/32) "
         f"{'with Win32 LoadCursorFromFileW ' if is_win else ''}and hotspot-guide.png."
     )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build or validate Nemunemu Calico cursors.")
+    parser = argparse.ArgumentParser(description="Build or validate Nemunemu Calico v2 cursors.")
     parser.add_argument(
         "--check",
         action="store_true",
