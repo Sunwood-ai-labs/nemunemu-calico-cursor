@@ -4,11 +4,10 @@
 .DESCRIPTION
     Copies the selected cursor size (128, 96, 64, 48, or 32; default: 96) to
     %LOCALAPPDATA%\Cursors\NemunemuCalico, backs up the existing HKCU:\Control Panel\Cursors
-    and Accessibility CursorSize settings on first run, updates CursorBaseSize and active
-    cursor paths, invokes Win32 SystemParametersInfo (SPI_SETCURSORSIZE + SPI_SETCURSORS),
-    and explicitly loads each .ani at full native resolution ($Size x $Size) via
-    LoadImageW(LR_LOADFROMFILE) + SetSystemCursor so the in-memory HCURSOR bitmap is not
-    downscaled to SM_CXCURSOR (32x32) during the current logon session.
+    settings on first run, keeps Windows DWM pointer magnification at 1.0x (SPI_SETCURSORSIZE = 32,
+    CursorBaseSize = 32, Accessibility\CursorSize = 1) to prevent double-scaling (e.g. 96px x 3 = 288px),
+    and injects full-resolution ($Size x $Size) animated HCURSORs via LoadImageW(LR_LOADFROMFILE) +
+    SetSystemCursor so on-screen display and screenshot capture match 1:1 at $Size x $Size.
 .PARAMETER Size
     Cursor pixel size to install and display: 128, 96 (default), 64, 48, or 32.
 #>
@@ -46,7 +45,7 @@ $SchemesRegPath = "HKCU:\Control Panel\Cursors\Schemes"
 $AccessRegPath  = "HKCU:\Software\Microsoft\Accessibility"
 $BackupFile     = Join-Path $InstallDir "backup-cursors.json"
 
-# 1. Back up current cursor settings on first run (and ensure OriginalCursorBaseSize is recorded)
+# 1. Back up current cursor settings on first run (never overwrite an existing backup)
 if (-not (Test-Path $BackupFile)) {
     $regItem = Get-Item -Path $CursorsRegPath
     $origBaseSize = 32
@@ -77,12 +76,6 @@ if (-not (Test-Path $BackupFile)) {
     $backupData | ConvertTo-Json -Depth 4 | Set-Content -Path $BackupFile -Encoding UTF8
     Write-Host "[Backup] Saved original cursor settings to: $BackupFile" -ForegroundColor Cyan
 } else {
-    $existing = Get-Content -Path $BackupFile -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($null -eq $existing.OriginalCursorBaseSize) {
-        $existing | Add-Member -NotePropertyName "OriginalCursorBaseSize" -NotePropertyValue 32 -Force
-        $existing | Add-Member -NotePropertyName "OriginalAccessibilityCursorSize" -NotePropertyValue 1 -Force
-        $existing | ConvertTo-Json -Depth 4 | Set-Content -Path $BackupFile -Encoding UTF8
-    }
     Write-Host "[Backup] Existing backup preserved at: $BackupFile" -ForegroundColor DarkGray
 }
 
@@ -139,32 +132,29 @@ $SchemeValue = @(
 
 New-ItemProperty -Path $SchemesRegPath -Name $SchemeName -Value $SchemeValue -PropertyType ExpandString -Force | Out-Null
 
-# 4. Update active HKCU:\Control Panel\Cursors entries and CursorBaseSize
+# 4. Update active HKCU:\Control Panel\Cursors entries and keep DWM magnification at 1.0x (32 / Slider=1)
 Set-ItemProperty -Path $CursorsRegPath -Name "(default)" -Value $SchemeName
 New-ItemProperty -Path $CursorsRegPath -Name "Scheme Source" -Value 1 -PropertyType DWord -Force | Out-Null
-New-ItemProperty -Path $CursorsRegPath -Name "CursorBaseSize" -Value $Size -PropertyType DWord -Force | Out-Null
+New-ItemProperty -Path $CursorsRegPath -Name "CursorBaseSize" -Value 32 -PropertyType DWord -Force | Out-Null
 New-ItemProperty -Path $CursorsRegPath -Name "Arrow" -Value $NormalPath -PropertyType ExpandString -Force | Out-Null
 New-ItemProperty -Path $CursorsRegPath -Name "Hand" -Value $LinkPath -PropertyType ExpandString -Force | Out-Null
 New-ItemProperty -Path $CursorsRegPath -Name "IBeam" -Value $TextPath -PropertyType ExpandString -Force | Out-Null
 New-ItemProperty -Path $CursorsRegPath -Name "Wait" -Value $BusyPath -PropertyType ExpandString -Force | Out-Null
 New-ItemProperty -Path $CursorsRegPath -Name "AppStarting" -Value $WorkingPath -PropertyType ExpandString -Force | Out-Null
 
-# Update Windows 10/11 Accessibility CursorSize slider (1..15 where 1=32px, 5=64px, 9=96px, 13=128px)
 if (-not (Test-Path $AccessRegPath)) {
     New-Item -Path $AccessRegPath -Force | Out-Null
 }
-$AccessSlider = [Math]::Max(1, [Math]::Min(15, [int](($Size - 32) / 8) + 1))
-New-ItemProperty -Path $AccessRegPath -Name "CursorSize" -Value $AccessSlider -PropertyType DWord -Force | Out-Null
+New-ItemProperty -Path $AccessRegPath -Name "CursorSize" -Value 1 -PropertyType DWord -Force | Out-Null
 
-# 5. Notify Windows via SystemParametersInfo AND inject full-resolution HCURSORs via LoadImageW + SetSystemCursor
-if (-not ("Win32CursorNativeV3" -as [type])) {
+# 5. Reset DWM pointer magnification to 1.0x (SPI_SETCURSORSIZE = 32), reload scheme, and inject $Size x $Size HCURSORs
+if (-not ("Win32CursorNativeV4" -as [type])) {
     Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
 
-public static class Win32CursorNativeV3 {
+public static class Win32CursorNativeV4 {
     public const uint SPI_SETCURSORS = 0x0057;
-    public const uint SPI_GETCURSORSIZE = 0x2028;
     public const uint SPI_SETCURSORSIZE = 0x2029;
     public const uint SPIF_UPDATEINIFILE = 0x01;
     public const uint SPIF_SENDCHANGE = 0x02;
@@ -198,38 +188,38 @@ public static class Win32CursorNativeV3 {
 "@
 }
 
-$sizeOk = [Win32CursorNativeV3]::SystemParametersInfo(
-    [Win32CursorNativeV3]::SPI_SETCURSORSIZE,
+# Ensure DWM pointer multiplier is 1.0x (32) so a 96x96 HCURSOR is NOT multiplied by 3x into 288x288!
+$sizeOk = [Win32CursorNativeV4]::SystemParametersInfo(
+    [Win32CursorNativeV4]::SPI_SETCURSORSIZE,
     0,
-    [IntPtr]$Size,
-    ([Win32CursorNativeV3]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV3]::SPIF_SENDCHANGE)
+    [IntPtr]32,
+    ([Win32CursorNativeV4]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV4]::SPIF_SENDCHANGE)
 )
 if (-not $sizeOk) {
-    [void][Win32CursorNativeV3]::SystemParametersInfo(
-        [Win32CursorNativeV3]::SPI_SETCURSORSIZE,
+    [void][Win32CursorNativeV4]::SystemParametersInfo(
+        [Win32CursorNativeV4]::SPI_SETCURSORSIZE,
         0,
-        [IntPtr]$Size,
-        [Win32CursorNativeV3]::SPIF_SENDCHANGE
+        [IntPtr]32,
+        [Win32CursorNativeV4]::SPIF_SENDCHANGE
     )
 }
 
-$curOk = [Win32CursorNativeV3]::SystemParametersInfo(
-    [Win32CursorNativeV3]::SPI_SETCURSORS,
+$curOk = [Win32CursorNativeV4]::SystemParametersInfo(
+    [Win32CursorNativeV4]::SPI_SETCURSORS,
     0,
     [IntPtr]::Zero,
-    ([Win32CursorNativeV3]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV3]::SPIF_SENDCHANGE)
+    ([Win32CursorNativeV4]::SPIF_UPDATEINIFILE -bor [Win32CursorNativeV4]::SPIF_SENDCHANGE)
 )
 if (-not $curOk) {
-    [void][Win32CursorNativeV3]::SystemParametersInfo(
-        [Win32CursorNativeV3]::SPI_SETCURSORS,
+    [void][Win32CursorNativeV4]::SystemParametersInfo(
+        [Win32CursorNativeV4]::SPI_SETCURSORS,
         0,
         [IntPtr]::Zero,
-        [Win32CursorNativeV3]::SPIF_SENDCHANGE
+        [Win32CursorNativeV4]::SPIF_SENDCHANGE
     )
 }
 
-# Explicitly load each .ani at $Size x $Size (without LR_DEFAULTSIZE) and set via SetSystemCursor
-# so the in-memory Win32 HCURSOR bitmap (hbmColor) is $Size x $Size even before next logon.
+# Inject native $Size x $Size HCURSORs so screen display and screenshot capture match 1:1
 $RoleMap = @(
     @{ Id = [uint32]32512; Path = $NormalPath },   # OCR_NORMAL (Arrow)
     @{ Id = [uint32]32649; Path = $LinkPath },     # OCR_HAND (Hand)
@@ -239,17 +229,17 @@ $RoleMap = @(
 )
 
 foreach ($entry in $RoleMap) {
-    $hCur = [Win32CursorNativeV3]::LoadImage(
+    $hCur = [Win32CursorNativeV4]::LoadImage(
         [IntPtr]::Zero,
         $entry.Path,
-        [Win32CursorNativeV3]::IMAGE_CURSOR,
+        [Win32CursorNativeV4]::IMAGE_CURSOR,
         $Size,
         $Size,
-        [Win32CursorNativeV3]::LR_LOADFROMFILE
+        [Win32CursorNativeV4]::LR_LOADFROMFILE
     )
     if ($hCur -ne [IntPtr]::Zero) {
-        [void][Win32CursorNativeV3]::SetSystemCursor($hCur, $entry.Id)
+        [void][Win32CursorNativeV4]::SetSystemCursor($hCur, $entry.Id)
     }
 }
 
-Write-Host "[Active] Applied '$SchemeName' v2 (${Size}x${Size} native HCURSOR + SPI_SETCURSORSIZE=$Size) immediately!" -ForegroundColor Green
+Write-Host "[Active] Applied '$SchemeName' v2 at 1:1 native ${Size}x${Size} (DWM scale=1.0x, HCURSOR=${Size}x${Size})!" -ForegroundColor Green
