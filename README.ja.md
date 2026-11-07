@@ -14,7 +14,7 @@
   </p>
 
   <p>
-    <a href="./README.md">English</a> | <strong>日本語</strong> | <a href="https://sunwood-ai-labs.github.io/nemunemu-calico-cursor/ja/">ドキュメント</a>
+    <a href="./README.md">English</a> | <strong>日本語</strong> | <a href="https://sunwood-ai-labs.github.io/nemunemu-calico-cursor/ja/">ドキュメント</a> | <a href="./CHANGELOG.md">リリースノート</a> | <a href="https://github.com/Sunwood-ai-labs/nemunemu-calico-cursor/releases">Releases</a>
   </p>
 </div>
 

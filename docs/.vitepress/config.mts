@@ -25,7 +25,8 @@ export default defineConfig({
           { text: 'Home', link: '/' },
           { text: 'Getting Started', link: '/guide/getting-started' },
           { text: 'Cursors & Hotspots', link: '/guide/cursors-and-hotspots' },
-          { text: 'Customization', link: '/guide/customization' }
+          { text: 'Customization', link: '/guide/customization' },
+          { text: 'Release Notes', link: '/guide/changelog' }
         ],
         sidebar: [
           {
@@ -33,7 +34,8 @@ export default defineConfig({
             items: [
               { text: 'Getting Started', link: '/guide/getting-started' },
               { text: 'Cursors & Hotspots', link: '/guide/cursors-and-hotspots' },
-              { text: 'Build & Customization', link: '/guide/customization' }
+              { text: 'Build & Customization', link: '/guide/customization' },
+              { text: 'Release Notes', link: '/guide/changelog' }
             ]
           }
         ],
@@ -54,7 +56,8 @@ export default defineConfig({
           { text: 'ホーム', link: '/ja/' },
           { text: '導入ガイド', link: '/ja/guide/getting-started' },
           { text: 'カーソル＆ホットスポット', link: '/ja/guide/cursors-and-hotspots' },
-          { text: 'ビルド＆カスタマイズ', link: '/ja/guide/customization' }
+          { text: 'ビルド＆カスタマイズ', link: '/ja/guide/customization' },
+          { text: 'リリースノート', link: '/ja/guide/changelog' }
         ],
         sidebar: [
           {
@@ -62,7 +65,8 @@ export default defineConfig({
             items: [
               { text: '導入ガイド (Getting Started)', link: '/ja/guide/getting-started' },
               { text: 'カーソル一覧とホットスポット', link: '/ja/guide/cursors-and-hotspots' },
-              { text: 'ビルドとカスタマイズ', link: '/ja/guide/customization' }
+              { text: 'ビルドとカスタマイズ', link: '/ja/guide/customization' },
+              { text: 'リリースノート (Changelog)', link: '/ja/guide/changelog' }
             ]
           }
         ],
