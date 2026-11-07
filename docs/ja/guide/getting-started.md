@@ -1,6 +1,6 @@
 # 🚀 導入ガイド (Getting Started)
 
-**ねむねむ三毛ネコ カーソル v2 (Nemunemu Calico Cursor)** は、PowerShell ワンコマンドスクリプトまたは `install.inf` の右クリックメニューから、Windows 10 / 11 環境へ数秒で導入できます。
+**ねむねむ三毛ネコ カーソル v3 (Nemunemu Calico Cursor)** は、PowerShell ワンコマンドスクリプトまたは `install.inf` の右クリックメニューから、Windows 10 / 11 環境へ数秒で導入できます。
 
 ---
 
@@ -8,9 +8,9 @@
 
 `install.ps1` は以下の5つのステップを安全に自動実行します。
 
-1. 指定されたサイズ（`128`, `96` デフォルト, `64`, `48`, `32`）のカーソルファイルを `%LOCALAPPDATA%\Cursors\NemunemuCalico` にコピーします。
+1. 指定されたサイズ（`128`, `96` デフォルト, `64`, `48`, `32`）の全10種類のカーソルファイルを `%LOCALAPPDATA%\Cursors\NemunemuCalico` にコピーします。
 2. 変更前の `HKCU:\Control Panel\Cursors` レジストリ設定および元のカーソルサイズ（`CursorBaseSize` / `Accessibility\CursorSize`）を `%LOCALAPPDATA%\Cursors\NemunemuCalico\backup-cursors.json` に自動保存します。
-3. `Arrow`、`Hand`、`IBeam`、`Wait`、`AppStarting` の各ロールと **Nemunemu Calico** スキームをレジストリに登録します。
+3. 日常操作で使われる主要10ロール（`Arrow`, `Hand`, `IBeam`, `Wait`, `AppStarting`, `Crosshair`, `No`, `SizeNS`, `SizeWE`, `SizeAll`）と **Nemunemu Calico** スキームをレジストリに登録します。
 4. `CursorBaseSize` と `Accessibility\CursorSize` を更新し、Win32 API `SystemParametersInfo(SPI_SETCURSORSIZE)` を呼び出すことで、OS側の32px縮小を解除して指定サイズ（標準 `96×96`、最大 `128×128`）で大きくくっきり描画させます。
 5. Win32 API `SystemParametersInfo(SPI_SETCURSORS)` を呼び出し、**Windows の再起動やサインアウト不要で即座にカーソルを反映**します。
 

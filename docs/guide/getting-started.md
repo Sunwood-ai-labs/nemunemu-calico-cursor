@@ -1,6 +1,6 @@
 # 🚀 Getting Started
 
-**Nemunemu Calico Cursor v2** (`ねむねむ三毛ネコ カーソル`) can be installed on Windows 10 and Windows 11 in seconds using either the automated PowerShell installer or the classic `.inf` Explorer installer.
+**Nemunemu Calico Cursor v3** (`ねむねむ三毛ネコ カーソル`) can be installed on Windows 10 and Windows 11 in seconds using either the automated PowerShell installer or the classic `.inf` Explorer installer.
 
 ---
 
@@ -8,9 +8,9 @@
 
 The `install.ps1` script performs five safe steps automatically:
 
-1. Copies the selected cursor size files (`128`, `96` default, `64`, `48`, or `32`) into `%LOCALAPPDATA%\Cursors\NemunemuCalico`.
+1. Copies all 10 cursor role files for the selected size (`128`, `96` default, `64`, `48`, or `32`) into `%LOCALAPPDATA%\Cursors\NemunemuCalico`.
 2. Saves your current `HKCU:\Control Panel\Cursors` values and your original `CursorBaseSize` / `Accessibility\CursorSize` to `%LOCALAPPDATA%\Cursors\NemunemuCalico\backup-cursors.json` (preserving your original defaults).
-3. Updates the user registry keys for `Arrow`, `Hand`, `IBeam`, `Wait`, and `AppStarting` and registers the **Nemunemu Calico** scheme.
+3. Updates the user registry keys for all 10 primary Windows cursor roles (`Arrow`, `Hand`, `IBeam`, `Wait`, `AppStarting`, `Crosshair`, `No`, `SizeNS`, `SizeWE`, and `SizeAll`) and registers the **Nemunemu Calico** scheme.
 4. Updates `CursorBaseSize` and `Accessibility\CursorSize` and invokes Win32 API `SystemParametersInfo(SPI_SETCURSORSIZE)` so Windows renders the cursor at its full target pixel size instead of shrinking it to `32×32`.
 5. Calls Win32 API `SystemParametersInfo(SPI_SETCURSORS)` so your new cursors appear **immediately without logging out or restarting**.
 

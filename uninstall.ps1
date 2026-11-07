@@ -59,6 +59,11 @@ if (Test-Path $BackupFile) {
     New-ItemProperty -Path $CursorsRegPath -Name "IBeam" -Value "" -PropertyType ExpandString -Force | Out-Null
     New-ItemProperty -Path $CursorsRegPath -Name "Wait" -Value "C:\WINDOWS\cursors\aero_busy.ani" -PropertyType ExpandString -Force | Out-Null
     New-ItemProperty -Path $CursorsRegPath -Name "AppStarting" -Value "C:\WINDOWS\cursors\aero_working.ani" -PropertyType ExpandString -Force | Out-Null
+    New-ItemProperty -Path $CursorsRegPath -Name "Crosshair" -Value "" -PropertyType ExpandString -Force | Out-Null
+    New-ItemProperty -Path $CursorsRegPath -Name "No" -Value "C:\WINDOWS\cursors\aero_unavail.cur" -PropertyType ExpandString -Force | Out-Null
+    New-ItemProperty -Path $CursorsRegPath -Name "SizeNS" -Value "C:\WINDOWS\cursors\aero_ns.cur" -PropertyType ExpandString -Force | Out-Null
+    New-ItemProperty -Path $CursorsRegPath -Name "SizeWE" -Value "C:\WINDOWS\cursors\aero_ew.cur" -PropertyType ExpandString -Force | Out-Null
+    New-ItemProperty -Path $CursorsRegPath -Name "SizeAll" -Value "C:\WINDOWS\cursors\aero_move.cur" -PropertyType ExpandString -Force | Out-Null
     Write-Host "[Restore] Reset cursor configuration to Windows Default (Aero, 32px)." -ForegroundColor Cyan
 }
 

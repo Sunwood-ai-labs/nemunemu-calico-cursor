@@ -85,7 +85,12 @@ $CursorStems = @(
     "nemunemu_link",
     "nemunemu_text",
     "nemunemu_busy",
-    "nemunemu_working"
+    "nemunemu_working",
+    "nemunemu_precision",
+    "nemunemu_unavailable",
+    "nemunemu_vertical",
+    "nemunemu_horizontal",
+    "nemunemu_move"
 )
 
 foreach ($stem in $CursorStems) {
@@ -97,33 +102,38 @@ foreach ($stem in $CursorStems) {
         Copy-Item -Path $srcFile -Destination (Join-Path $InstallDir ($stem + $ext)) -Force
     }
 }
-Write-Host "[Copy] Installed ${Size}x${Size} v2 cursors to: $InstallDir" -ForegroundColor Green
+Write-Host "[Copy] Installed ${Size}x${Size} cursors (10 roles) to: $InstallDir" -ForegroundColor Green
 
 # 3. Register scheme under HKCU:\Control Panel\Cursors\Schemes
 if (-not (Test-Path $SchemesRegPath)) {
     New-Item -Path $SchemesRegPath -Force | Out-Null
 }
 
-$NormalPath  = Join-Path $InstallDir "nemunemu_normal.ani"
-$LinkPath    = Join-Path $InstallDir "nemunemu_link.ani"
-$TextPath    = Join-Path $InstallDir "nemunemu_text.ani"
-$BusyPath    = Join-Path $InstallDir "nemunemu_busy.ani"
-$WorkingPath = Join-Path $InstallDir "nemunemu_working.ani"
+$NormalPath      = Join-Path $InstallDir "nemunemu_normal.ani"
+$LinkPath        = Join-Path $InstallDir "nemunemu_link.ani"
+$TextPath        = Join-Path $InstallDir "nemunemu_text.ani"
+$BusyPath        = Join-Path $InstallDir "nemunemu_busy.ani"
+$WorkingPath     = Join-Path $InstallDir "nemunemu_working.ani"
+$PrecisionPath   = Join-Path $InstallDir "nemunemu_precision.ani"
+$UnavailablePath = Join-Path $InstallDir "nemunemu_unavailable.ani"
+$VerticalPath    = Join-Path $InstallDir "nemunemu_vertical.ani"
+$HorizontalPath  = Join-Path $InstallDir "nemunemu_horizontal.ani"
+$MovePath        = Join-Path $InstallDir "nemunemu_move.ani"
 
 $SchemeValue = @(
     $NormalPath,
     "%SystemRoot%\cursors\aero_helpsel.cur",
     $WorkingPath,
     $BusyPath,
-    "",
+    $PrecisionPath,
     $TextPath,
     "%SystemRoot%\cursors\aero_pen.cur",
-    "%SystemRoot%\cursors\aero_unavail.cur",
-    "%SystemRoot%\cursors\aero_ns.cur",
-    "%SystemRoot%\cursors\aero_ew.cur",
+    $UnavailablePath,
+    $VerticalPath,
+    $HorizontalPath,
     "%SystemRoot%\cursors\aero_nwse.cur",
     "%SystemRoot%\cursors\aero_nesw.cur",
-    "%SystemRoot%\cursors\aero_move.cur",
+    $MovePath,
     "%SystemRoot%\cursors\aero_up.cur",
     $LinkPath,
     "%SystemRoot%\cursors\aero_pin.cur",
@@ -141,6 +151,11 @@ New-ItemProperty -Path $CursorsRegPath -Name "Hand" -Value $LinkPath -PropertyTy
 New-ItemProperty -Path $CursorsRegPath -Name "IBeam" -Value $TextPath -PropertyType ExpandString -Force | Out-Null
 New-ItemProperty -Path $CursorsRegPath -Name "Wait" -Value $BusyPath -PropertyType ExpandString -Force | Out-Null
 New-ItemProperty -Path $CursorsRegPath -Name "AppStarting" -Value $WorkingPath -PropertyType ExpandString -Force | Out-Null
+New-ItemProperty -Path $CursorsRegPath -Name "Crosshair" -Value $PrecisionPath -PropertyType ExpandString -Force | Out-Null
+New-ItemProperty -Path $CursorsRegPath -Name "No" -Value $UnavailablePath -PropertyType ExpandString -Force | Out-Null
+New-ItemProperty -Path $CursorsRegPath -Name "SizeNS" -Value $VerticalPath -PropertyType ExpandString -Force | Out-Null
+New-ItemProperty -Path $CursorsRegPath -Name "SizeWE" -Value $HorizontalPath -PropertyType ExpandString -Force | Out-Null
+New-ItemProperty -Path $CursorsRegPath -Name "SizeAll" -Value $MovePath -PropertyType ExpandString -Force | Out-Null
 
 if (-not (Test-Path $AccessRegPath)) {
     New-Item -Path $AccessRegPath -Force | Out-Null
@@ -221,11 +236,16 @@ if (-not $curOk) {
 
 # Inject native $Size x $Size HCURSORs so screen display and screenshot capture match 1:1
 $RoleMap = @(
-    @{ Id = [uint32]32512; Path = $NormalPath },   # OCR_NORMAL (Arrow)
-    @{ Id = [uint32]32649; Path = $LinkPath },     # OCR_HAND (Hand)
-    @{ Id = [uint32]32513; Path = $TextPath },     # OCR_IBEAM (IBeam)
-    @{ Id = [uint32]32514; Path = $BusyPath },     # OCR_WAIT (Wait)
-    @{ Id = [uint32]32650; Path = $WorkingPath }   # OCR_APPSTARTING (AppStarting)
+    @{ Id = [uint32]32512; Path = $NormalPath },      # OCR_NORMAL (Arrow)
+    @{ Id = [uint32]32649; Path = $LinkPath },        # OCR_HAND (Hand)
+    @{ Id = [uint32]32513; Path = $TextPath },        # OCR_IBEAM (IBeam)
+    @{ Id = [uint32]32514; Path = $BusyPath },        # OCR_WAIT (Wait)
+    @{ Id = [uint32]32650; Path = $WorkingPath },     # OCR_APPSTARTING (AppStarting)
+    @{ Id = [uint32]32515; Path = $PrecisionPath },   # OCR_CROSS (Crosshair)
+    @{ Id = [uint32]32648; Path = $UnavailablePath }, # OCR_NO (No)
+    @{ Id = [uint32]32645; Path = $VerticalPath },    # OCR_SIZENS (SizeNS)
+    @{ Id = [uint32]32644; Path = $HorizontalPath },  # OCR_SIZEWE (SizeWE)
+    @{ Id = [uint32]32646; Path = $MovePath }         # OCR_SIZEALL (SizeAll)
 )
 
 foreach ($entry in $RoleMap) {
