@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./assets/header.svg" alt="ねむねむ三毛ネコ カーソル バナー" width="800" />
+  <img src="./assets/header.ja.svg" alt="ねむねむ三毛ネコ カーソル バナー" width="800" />
 
   <h1>🐾 ねむねむ三毛ネコ カーソル (v2)</h1>
 

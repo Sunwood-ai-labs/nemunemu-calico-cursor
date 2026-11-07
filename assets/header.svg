@@ -1,9 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" width="800" height="240">
   <defs>
+    <clipPath id="card-clip">
+      <rect x="8" y="8" width="784" height="224" rx="24" />
+    </clipPath>
     <linearGradient id="bannerBg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#E6FFFA" />
-      <stop offset="50%" stop-color="#F7FAFC" />
-      <stop offset="100%" stop-color="#FFFFAF" stop-opacity="0.6" />
+      <stop offset="52%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#FEFCE8" />
     </linearGradient>
     <linearGradient id="mintAccent" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#4FD1C5" />
@@ -14,24 +17,33 @@
       <stop offset="100%" stop-color="#DD6B20" />
     </linearGradient>
     <pattern id="dotGrid" width="24" height="24" patternUnits="userSpaceOnUse">
-      <circle cx="4" cy="4" r="1.5" fill="#38B2AC" opacity="0.18" />
+      <circle cx="4" cy="4" r="1.4" fill="#38B2AC" opacity="0.16" />
     </pattern>
+    <filter id="softShadow" x="-12%" y="-12%" width="124%" height="124%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#234E52" flood-opacity="0.08" />
+    </filter>
   </defs>
 
-  <!-- Outer Card Background -->
-  <rect x="4" y="4" width="792" height="232" rx="24" fill="#FFFDF9" stroke="#81E6D9" stroke-width="3" />
-  <rect x="4" y="4" width="792" height="232" rx="24" fill="url(#bannerBg)" />
-  <rect x="4" y="4" width="792" height="232" rx="24" fill="url(#dotGrid)" />
+  <!-- Clipped Background & Decorative Elements -->
+  <g clip-path="url(#card-clip)">
+    <rect x="8" y="8" width="784" height="224" fill="#FFFDF9" />
+    <rect x="8" y="8" width="784" height="224" fill="url(#bannerBg)" />
+    <rect x="8" y="8" width="784" height="224" fill="url(#dotGrid)" />
 
-  <!-- Decorative Soft Shapes -->
-  <circle cx="730" cy="45" r="70" fill="#B2F5EA" opacity="0.35" />
-  <circle cx="60" cy="200" r="55" fill="#FBD38D" opacity="0.25" />
+    <!-- Soft Decorative Blobs (Safely Clipped Inside Card) -->
+    <circle cx="740" cy="42" r="78" fill="#B2F5EA" opacity="0.32" />
+    <circle cx="58" cy="202" r="62" fill="#FBD38D" opacity="0.24" />
+    <circle cx="640" cy="215" r="48" fill="#E6FFFA" opacity="0.45" />
+  </g>
 
-  <!-- Left Mascot & Cursor Composition -->
-  <g transform="translate(52, 36)">
-    <!-- Soft Halo Behind Cat -->
-    <circle cx="84" cy="84" r="72" fill="#FFFFFF" stroke="#B2F5EA" stroke-width="3" />
-    <circle cx="84" cy="84" r="62" fill="#E6FFFA" opacity="0.6" />
+  <!-- Crisp Outer Card Border -->
+  <rect x="8" y="8" width="784" height="224" rx="24" fill="none" stroke="#81E6D9" stroke-width="2.5" />
+
+  <!-- Left Mascot & Cursor Emblem (x=30..198) -->
+  <g transform="translate(30, 36)" filter="url(#softShadow)">
+    <!-- Double Ring Emblem Base -->
+    <circle cx="84" cy="84" r="74" fill="#FFFFFF" stroke="#81E6D9" stroke-width="2.5" />
+    <circle cx="84" cy="84" r="64" fill="#E6FFFA" opacity="0.65" stroke="#B2F5EA" stroke-width="1.5" stroke-dasharray="6 4" />
 
     <!-- Calico Cat Ears -->
     <polygon points="44,72 34,32 72,50" fill="#4A3B32" stroke="#4A3B32" stroke-width="4" stroke-linejoin="round" />
@@ -48,7 +60,7 @@
     <path d="M 56,88 Q 65,97 74,88" fill="none" stroke="#4A3B32" stroke-width="4.5" stroke-linecap="round" />
     <path d="M 94,88 Q 103,97 112,88" fill="none" stroke="#4A3B32" stroke-width="4.5" stroke-linecap="round" />
 
-    <!-- Cheeks -->
+    <!-- Rosy Cheeks -->
     <ellipse cx="50" cy="98" rx="8" ry="4.5" fill="#FEB2B2" opacity="0.85" />
     <ellipse cx="118" cy="98" rx="8" ry="4.5" fill="#FEB2B2" opacity="0.85" />
 
@@ -61,7 +73,7 @@
     <ellipse cx="104" cy="128" rx="13" ry="9" fill="#FFFDF9" stroke="#4A3B32" stroke-width="3.5" />
 
     <!-- Sleep Bubble -->
-    <circle cx="102" cy="102" r="9.5" fill="#E6FFFA" fill-opacity="0.88" stroke="#38B2AC" stroke-width="2.5" />
+    <circle cx="102" cy="102" r="9.5" fill="#E6FFFA" fill-opacity="0.9" stroke="#38B2AC" stroke-width="2.5" />
     <circle cx="99" cy="99" r="2.5" fill="#FFFFFF" />
 
     <!-- Mint Pointer Arrow (Top-Left of Mascot) -->
@@ -71,52 +83,68 @@
     </g>
 
     <!-- Floating Zzz -->
-    <g fill="#319795" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-weight="800">
+    <g fill="#2C7A7B" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-weight="800">
       <text x="128" y="30" font-size="18" transform="rotate(-12 128 30)">Z</text>
       <text x="144" y="20" font-size="14" transform="rotate(6 144 20)">z</text>
       <text x="156" y="12" font-size="11" transform="rotate(-5 156 12)">z</text>
     </g>
   </g>
 
-  <!-- Right Typography & Feature Pills -->
-  <g transform="translate(244, 54)" font-family="system-ui, -apple-system, 'Segoe UI', 'Hiragino Sans', 'Yu Gothic UI', sans-serif">
-    <!-- Top Pill Tag -->
-    <rect x="0" y="0" width="236" height="28" rx="14" fill="#E6FFFA" stroke="#4FD1C5" stroke-width="1.5" />
-    <circle cx="15" cy="14" r="4.5" fill="#319795" />
-    <text x="27" y="19" font-size="12.5" font-weight="700" fill="#234E52" letter-spacing="0.4">WINDOWS 10 / 11 CURSOR THEME</text>
+  <!-- Center Typography & Feature Pills (x=216..644) -->
+  <g transform="translate(216, 44)" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+    <!-- Top Status Badge (Generous 264px width) -->
+    <rect x="0" y="0" width="264" height="28" rx="14" fill="#E6FFFA" stroke="#4FD1C5" stroke-width="1.5" />
+    <circle cx="16" cy="14" r="4.5" fill="#319795" />
+    <text x="140" y="18.5" font-size="11.5" font-weight="700" fill="#234E52" letter-spacing="0.5" text-anchor="middle">WINDOWS 10 / 11 ANIMATED CURSOR</text>
 
     <!-- Main Title -->
-    <text x="0" y="68" font-size="38" font-weight="800" fill="#2D3748" letter-spacing="-0.5">Nemunemu Calico Cursor</text>
+    <text x="0" y="64" font-size="33" font-weight="800" fill="#1A202C" letter-spacing="-0.4">Nemunemu Calico Cursor</text>
 
-    <!-- Japanese Subtitle -->
-    <text x="2" y="102" font-size="20" font-weight="700" fill="#4A5568">ねむねむ三毛ネコ カーソル — Mint Pointer &amp; Sleepy Calico Cat</text>
+    <!-- Subtitle (Pure English, fits comfortably within x=0..420) -->
+    <text x="2" y="95" font-size="15" font-weight="600" fill="#4A5568">Mint Pointer &amp; Sleepy Calico Cat — 8-Frame Animated Theme</text>
 
-    <!-- Feature Chips Row -->
-    <g transform="translate(0, 122)">
-      <!-- Chip 1: 4 Cursors / 5 Roles -->
-      <rect x="0" y="0" width="132" height="30" rx="8" fill="#FFFFFF" stroke="#CBD5E0" stroke-width="1.5" />
-      <text x="66" y="20" font-size="12.5" font-weight="700" fill="#2C7A7B" text-anchor="middle">4 Cursors · 5 Roles</text>
+    <!-- Bottom 3 Feature Pills Row -->
+    <g transform="translate(0, 118)">
+      <!-- Pill 1 -->
+      <rect x="0" y="0" width="128" height="30" rx="9" fill="#FFFFFF" stroke="#CBD5E0" stroke-width="1.5" />
+      <text x="64" y="19.5" font-size="11.5" font-weight="700" fill="#2C7A7B" text-anchor="middle">4 Cursors · 5 Roles</text>
 
-      <!-- Chip 2: 8-Frame 32-bit BGRA -->
-      <rect x="142" y="0" width="154" height="30" rx="8" fill="#FFFFFF" stroke="#CBD5E0" stroke-width="1.5" />
-      <text x="219" y="20" font-size="12.5" font-weight="700" fill="#4A3B32" text-anchor="middle">8-Frame · 32-bit BGRA</text>
+      <!-- Pill 2 -->
+      <rect x="136" y="0" width="134" height="30" rx="9" fill="#FFFFFF" stroke="#CBD5E0" stroke-width="1.5" />
+      <text x="203" y="19.5" font-size="11.5" font-weight="700" fill="#4A3B32" text-anchor="middle">8-Frame 32-bit .ANI</text>
 
-      <!-- Chip 3: Sizes 64 / 48 / 32 -->
-      <rect x="306" y="0" width="166" height="30" rx="8" fill="#FFFFFF" stroke="#CBD5E0" stroke-width="1.5" />
-      <text x="389" y="20" font-size="12.5" font-weight="700" fill="#DD6B20" text-anchor="middle">64×64 · 48×48 · 32×32</text>
+      <!-- Pill 3 -->
+      <rect x="278" y="0" width="156" height="30" rx="9" fill="#FFFFFF" stroke="#CBD5E0" stroke-width="1.5" />
+      <text x="356" y="19.5" font-size="11.5" font-weight="700" fill="#DD6B20" text-anchor="middle">96×96 Default (32–128px)</text>
     </g>
   </g>
 
-  <!-- Subtle Right-Side Cursor Role Mini Icons -->
-  <g transform="translate(736, 68)" opacity="0.85">
-    <!-- Normal Arrow Mini -->
-    <circle cx="18" cy="18" r="15" fill="#E6FFFA" stroke="#81E6D9" stroke-width="1.5" />
-    <path d="M 13,10 L 13,25 L 17,21 L 20,27 L 23,25 L 20,19 L 25,19 Z" fill="#319795" />
-    <!-- I-Beam Mini -->
-    <circle cx="18" cy="56" r="15" fill="#FFFDF9" stroke="#FBD38D" stroke-width="1.5" />
-    <path d="M 14,49 H 22 M 18,49 V 63 M 14,63 H 22" fill="none" stroke="#DD6B20" stroke-width="2.2" stroke-linecap="round" />
-    <!-- Busy Spinner Mini -->
-    <circle cx="18" cy="94" r="15" fill="#E6FFFA" stroke="#81E6D9" stroke-width="1.5" />
-    <circle cx="18" cy="94" r="7" fill="none" stroke="#319795" stroke-width="2.5" stroke-dasharray="4 4" />
+  <!-- Right 2x2 Cursor Role Showcase Grid (x=668..768) -->
+  <g transform="translate(668, 66)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="100" height="108" rx="16" fill="#FFFFFF" fill-opacity="0.82" stroke="#B2F5EA" stroke-width="1.5" />
+
+    <!-- 1. Normal Arrow (Top-Left) -->
+    <g transform="translate(28, 29)">
+      <circle cx="0" cy="0" r="17" fill="#E6FFFA" stroke="#81E6D9" stroke-width="1.5" />
+      <path d="M -5,-8 L -5,7 L -1,3 L 2,9 L 5,7 L 2,1 L 7,1 Z" fill="#2C7A7B" />
+    </g>
+
+    <!-- 2. Link Hand (Top-Right) -->
+    <g transform="translate(72, 29)">
+      <circle cx="0" cy="0" r="17" fill="#FFFDF9" stroke="#FBD38D" stroke-width="1.5" />
+      <path d="M -2,-8 V 1 M -5,-2 V 4 C -5,7 5,7 5,3 V -2 M 1,-3 V 1 M 4,-2 V 2" fill="none" stroke="#DD6B20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <!-- 3. Text I-Beam (Bottom-Left) -->
+    <g transform="translate(28, 79)">
+      <circle cx="0" cy="0" r="17" fill="#FFFDF9" stroke="#FBD38D" stroke-width="1.5" />
+      <path d="M -4,-7 H 4 M 0,-7 V 7 M -4,7 H 4" fill="none" stroke="#DD6B20" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+
+    <!-- 4. Busy Spinner (Bottom-Right) -->
+    <g transform="translate(72, 79)">
+      <circle cx="0" cy="0" r="17" fill="#E6FFFA" stroke="#81E6D9" stroke-width="1.5" />
+      <circle cx="0" cy="0" r="7.5" fill="none" stroke="#2C7A7B" stroke-width="2.5" stroke-dasharray="4 3.5" stroke-linecap="round" />
+    </g>
   </g>
 </svg>
